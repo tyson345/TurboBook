@@ -1,0 +1,222 @@
+import * as XLSX from 'xlsx';
+
+/**
+ * Client-side Excel store backed by SheetJS.
+ *
+ * The workbook is kept in localStorage as a base64 .xlsx blob so it survives
+ * reloads, and can be downloaded as a real Excel file at any time. Three sheets
+ * are maintained:
+ *   - Users          (sign-up records)
+ *   - Login Logs     (one row per successful login with the chosen service)
+ *   - Password Resets (one row per completed password reset)
+ */
+
+const STORAGE_KEY = 'turbobook_excel_v1';
+
+export const SERVICE_TYPES = [
+  'Website Creation',
+  'App Development',
+  'Management & Maintenance',
+  'SEO / Marketing',
+  'Branding & Design',
+  'Consultation',
+  'Other',
+] as const;
+
+export const SIGNUP_PURPOSES = [
+  'Website Creation',
+  'App Development',
+  'Management & Maintenance',
+  'SEO / Marketing',
+  'Branding & Design',
+  'Consultation',
+  'Other',
+] as const;
+
+export interface StoredUser {
+  id: string;
+  fullName: string;
+  phone: string;
+  email: string;
+  location: string;
+  purpose: string;
+  password: string;
+  createdAt: string;
+}
+
+interface SheetSpec {
+  name: string;
+  headers: string[];
+}
+
+const SHEETS: Record<string, SheetSpec> = {
+  users: { name: 'Users', headers: ['ID', 'Full Name', 'Phone', 'Email', 'Location', 'Purpose', 'Password', 'Created At'] },
+  loginLogs: { name: 'Login Logs', headers: ['Email', 'Service Type', 'Login At'] },
+  passwordResets: { name: 'Password Resets', headers: ['Contact', 'Contact Type', 'Verified At', 'Reset At'] },
+};
+
+function emptyWorkbook(): XLSX.WorkBook {
+  const wb = XLSX.utils.book_new();
+  Object.values(SHEETS).forEach(({ name, headers }) => {
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    XLSX.utils.book_append_sheet(wb, ws, name);
+  });
+  return wb;
+}
+
+function loadWorkbook(): XLSX.WorkBook {
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored) {
+    try {
+      const binary = atob(stored);
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return XLSX.read(bytes, { type: 'array' });
+    } catch {
+      // fall through to a fresh workbook
+    }
+  }
+  const wb = emptyWorkbook();
+  persistWorkbook(wb);
+  return wb;
+}
+
+function persistWorkbook(wb: XLSX.WorkBook) {
+  const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+  const bytes = new Uint8Array(arr);
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + chunk)));
+  }
+  localStorage.setItem(STORAGE_KEY, btoa(binary));
+}
+
+function ensureSheet(wb: XLSX.WorkBook, key: string): XLSX.WorkSheet {
+  const spec = SHEETS[key];
+  let ws = wb.Sheets[spec.name];
+  if (!ws) {
+    ws = XLSX.utils.aoa_to_sheet([spec.headers]);
+    XLSX.utils.book_append_sheet(wb, ws, spec.name);
+  }
+  return ws;
+}
+
+function sheetToRows<T>(wb: XLSX.WorkBook, key: string, map: (row: any[]) => T): T[] {
+  const ws = ensureSheet(wb, key);
+  const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, blankrows: false });
+  return aoa.slice(1).filter((r) => r.some((c) => c !== undefined && c !== '')).map(map);
+}
+
+function appendRow(wb: XLSX.WorkBook, key: string, row: any[]) {
+  const ws = ensureSheet(wb, key);
+  const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, blankrows: false });
+  aoa.push(row);
+  const newWs = XLSX.utils.aoa_to_sheet(aoa);
+  wb.Sheets[SHEETS[key].name] = newWs;
+}
+
+function uid() {
+  return 'U' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6).toUpperCase();
+}
+
+/* ----------------------------- Public API ----------------------------- */
+
+export function addUser(input: Omit<StoredUser, 'id' | 'createdAt'>): StoredUser {
+  const wb = loadWorkbook();
+  const user: StoredUser = { ...input, id: uid(), createdAt: new Date().toISOString() };
+  appendRow(wb, 'users', [
+    user.id, user.fullName, user.phone, user.email, user.location, user.purpose, user.password, user.createdAt,
+  ]);
+  persistWorkbook(wb);
+  return user;
+}
+
+export function findUserByContact(contact: string): StoredUser | null {
+  const wb = loadWorkbook();
+  const normalized = contact.trim().toLowerCase();
+  const digits = contact.replace(/\D/g, '');
+  const rows = sheetToRows<StoredUser>(wb, 'users', (r) => ({
+    id: String(r[0] ?? ''),
+    fullName: String(r[1] ?? ''),
+    phone: String(r[2] ?? ''),
+    email: String(r[3] ?? '').toLowerCase(),
+    location: String(r[4] ?? ''),
+    purpose: String(r[5] ?? ''),
+    password: String(r[6] ?? ''),
+    createdAt: String(r[7] ?? ''),
+  }));
+  return (
+    rows.find((u) => u.email === normalized || (digits && u.phone.replace(/\D/g, '') === digits)) ?? null
+  );
+}
+
+export function verifyLogin(email: string, password: string): StoredUser | null {
+  const user = findUserByContact(email);
+  if (!user) return null;
+  return user.password === password ? user : null;
+}
+
+export function updateUserPassword(contact: string, newPassword: string): boolean {
+  const wb = loadWorkbook();
+  const ws = ensureSheet(wb, 'users');
+  const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, blankrows: false });
+  const normalized = contact.trim().toLowerCase();
+  const digits = contact.replace(/\D/g, '');
+  let found = false;
+  for (let i = 1; i < aoa.length; i++) {
+    const row = aoa[i] ?? [];
+    const email = String(row[3] ?? '').toLowerCase();
+    const phone = String(row[2] ?? '').replace(/\D/g, '');
+    if (email === normalized || (digits && phone === digits)) {
+      row[6] = newPassword;
+      found = true;
+      break;
+    }
+  }
+  if (!found) return false;
+  wb.Sheets[SHEETS.users.name] = XLSX.utils.aoa_to_sheet(aoa);
+  persistWorkbook(wb);
+  return true;
+}
+
+export function logLoginSession(email: string, serviceType: string) {
+  const wb = loadWorkbook();
+  appendRow(wb, 'loginLogs', [email, serviceType, new Date().toISOString()]);
+  persistWorkbook(wb);
+}
+
+export function logPasswordReset(contact: string, contactType: 'email' | 'phone') {
+  const wb = loadWorkbook();
+  const now = new Date().toISOString();
+  appendRow(wb, 'passwordResets', [contact, contactType, now, now]);
+  persistWorkbook(wb);
+}
+
+export function downloadExcel() {
+  const wb = loadWorkbook();
+  const arr = XLSX.write(wb, { type: 'array', bookType: 'xlsx' }) as ArrayBuffer;
+  const blob = new Blob([arr], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'turbobook-data.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+export function getAllUsers(): StoredUser[] {
+  const wb = loadWorkbook();
+  return sheetToRows<StoredUser>(wb, 'users', (r) => ({
+    id: String(r[0] ?? ''),
+    fullName: String(r[1] ?? ''),
+    phone: String(r[2] ?? ''),
+    email: String(r[3] ?? '').toLowerCase(),
+    location: String(r[4] ?? ''),
+    purpose: String(r[5] ?? ''),
+    password: String(r[6] ?? ''),
+    createdAt: String(r[7] ?? ''),
+  }));
+}

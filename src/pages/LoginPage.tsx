@@ -1,23 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  Eye,
-  EyeOff,
-  Zap,
-  Mail,
-  Lock,
-  User as UserIcon,
-  Phone,
-  MapPin,
-  ArrowLeft,
-  ShieldCheck,
-  Download,
-  Shield,
-  UserCircle,
-} from 'lucide-react';
+import { Eye, EyeOff, Zap, Mail, Lock, User as UserIcon, Phone, MapPin, ArrowLeft, ShieldCheck, Shield, CircleUser as UserCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { SERVICE_TYPES, SIGNUP_PURPOSES, downloadExcel, getAdminCredentials } from '../lib/excelStore';
+import { SERVICE_TYPES, SIGNUP_PURPOSES, getAdminCredentials } from '../lib/excelStore';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 
@@ -675,13 +661,6 @@ export default function LoginPage() {
                 <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
               </button>
             )}
-
-            <button
-              onClick={() => downloadExcel()}
-              className="w-full flex items-center justify-center gap-1.5 text-xs text-gray-400 dark:text-gray-500 hover:text-purple-700 dark:hover:text-purple-400 font-medium pt-1"
-            >
-              <Download className="h-3.5 w-3.5" /> Download stored Excel file
-            </button>
           </div>
         </div>
       </motion.div>

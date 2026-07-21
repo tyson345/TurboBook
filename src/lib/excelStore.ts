@@ -4,12 +4,17 @@ import * as XLSX from 'xlsx';
  * Client-side Excel store backed by SheetJS.
  *
  * The workbook is kept in localStorage as a base64 .xlsx blob so it survives
- * reloads, and can be downloaded as a real Excel file at any time. Three sheets
+ * reloads, and can be downloaded as a real Excel file at any time. Five sheets
  * are maintained:
- *   - Users          (sign-up records)
+ *   - Users          (sign-up records with all customer details)
+ *   - Customers      (registered customers overview)
+ *   - Appointments   (all appointments)
  *   - Login Logs     (one row per successful login with the chosen service)
  *   - Password Resets (one row per completed password reset)
  */
+
+import customersData from '../data/customers.json';
+import appointmentsData from '../data/appointments.json';
 
 const STORAGE_KEY = 'turbobook_excel_v1';
 
@@ -52,6 +57,8 @@ interface SheetSpec {
 
 const SHEETS: Record<string, SheetSpec> = {
   users: { name: 'Users', headers: ['ID', 'Full Name', 'Phone', 'Email', 'Location', 'Purpose', 'Password', 'Role', 'Created At'] },
+  customers: { name: 'Customers', headers: ['ID', 'Name', 'Phone', 'Email', 'Last Visit', 'Total Appointments'] },
+  appointments: { name: 'Appointments', headers: ['ID', 'Customer Name', 'Service', 'Date', 'Time', 'Status', 'Phone', 'Email'] },
   loginLogs: { name: 'Login Logs', headers: ['Email', 'Role', 'Service Type', 'Login At'] },
   passwordResets: { name: 'Password Resets', headers: ['Contact', 'Contact Type', 'Verified At', 'Reset At'] },
 };
@@ -67,10 +74,28 @@ function seedAdminIfNeeded(wb: XLSX.WorkBook) {
   const exists = aoa.slice(1).some((r) => String(r[3] ?? '').toLowerCase() === ADMIN_EMAIL);
   if (!exists) {
     appendRow(wb, 'users', [
-      'ADMIN-001', 'TurboBook Admin', '+1 000 000 0000', ADMIN_EMAIL, 'HQ', 'Administration', ADMIN_PASSWORD, 'admin', new Date().toISOString(),
+      1, 'TurboBook Admin', '+1 000 000 0000', ADMIN_EMAIL, 'HQ', 'Administration', ADMIN_PASSWORD, 'admin', new Date().toISOString(),
     ]);
   }
+  seedStaticData(wb);
   localStorage.setItem(ADMIN_SEED_KEY, '1');
+}
+
+function seedStaticData(wb: XLSX.WorkBook) {
+  const custWs = ensureSheet(wb, 'customers');
+  const custAoa = XLSX.utils.sheet_to_json<any[]>(custWs, { header: 1, blankrows: false });
+  if (custAoa.length <= 1) {
+    (customersData as any[]).forEach((c, i) => {
+      appendRow(wb, 'customers', [i + 1, c.name, c.phone, c.email, c.lastVisit, c.totalAppointments]);
+    });
+  }
+  const aptWs = ensureSheet(wb, 'appointments');
+  const aptAoa = XLSX.utils.sheet_to_json<any[]>(aptWs, { header: 1, blankrows: false });
+  if (aptAoa.length <= 1) {
+    (appointmentsData as any[]).forEach((a, i) => {
+      appendRow(wb, 'appointments', [i + 1, a.customerName, a.service, a.date, a.time, a.status, a.phone, a.email]);
+    });
+  }
 }
 
 function emptyWorkbook(): XLSX.WorkBook {
@@ -138,17 +163,25 @@ function appendRow(wb: XLSX.WorkBook, key: string, row: any[]) {
   wb.Sheets[SHEETS[key].name] = newWs;
 }
 
-function uid() {
-  return 'U' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6).toUpperCase();
+function nextSerialId(wb: XLSX.WorkBook): number {
+  const ws = ensureSheet(wb, 'users');
+  const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, blankrows: false });
+  let max = 0;
+  for (let i = 1; i < aoa.length; i++) {
+    const v = Number(aoa[i]?.[0]);
+    if (!isNaN(v) && v > max) max = v;
+  }
+  return max + 1;
 }
 
 /* ----------------------------- Public API ----------------------------- */
 
 export function addUser(input: Omit<StoredUser, 'id' | 'createdAt'>): StoredUser {
   const wb = loadWorkbook();
-  const user: StoredUser = { ...input, id: uid(), createdAt: new Date().toISOString() };
+  const id = nextSerialId(wb);
+  const user: StoredUser = { ...input, id: String(id), createdAt: new Date().toISOString() };
   appendRow(wb, 'users', [
-    user.id, user.fullName, user.phone, user.email, user.location, user.purpose, user.password, user.role, user.createdAt,
+    id, user.fullName, user.phone, user.email, user.location, user.purpose, user.password, user.role, user.createdAt,
   ]);
   persistWorkbook(wb);
   return user;

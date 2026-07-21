@@ -32,8 +32,11 @@ export interface WeeklyData {
   appointments: number;
 }
 
+export type UserRole = 'admin' | 'customer';
+
 export interface User {
   email: string;
   name: string;
+  role: UserRole;
   avatar?: string;
 }

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User } from '../types';
+import type { User, UserRole } from '../types';
 import {
   addUser,
   verifyLogin,
@@ -21,7 +21,14 @@ interface SignUpInput {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
-  login: (email: string, password: string, serviceType: string) => Promise<{ ok: boolean; error?: string }>;
+  isAdmin: boolean;
+  isCustomer: boolean;
+  login: (
+    email: string,
+    password: string,
+    serviceType: string,
+    role: UserRole
+  ) => Promise<{ ok: boolean; error?: string }>;
   signup: (input: SignUpInput) => Promise<{ ok: boolean; error?: string }>;
   resetPassword: (contact: string, newPassword: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
@@ -43,14 +50,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const login: AuthContextType['login'] = async (email, password, serviceType) => {
+  const persist = (u: User) => {
+    setUser(u);
+    localStorage.setItem('turbobook_user', JSON.stringify(u));
+  };
+
+  const login: AuthContextType['login'] = async (email, password, serviceType, role) => {
     await new Promise((r) => setTimeout(r, 500));
     const stored = verifyLogin(email, password);
     if (!stored) return { ok: false, error: 'Invalid email or password' };
-    const userData: User = { email: stored.email, name: stored.fullName };
-    setUser(userData);
-    localStorage.setItem('turbobook_user', JSON.stringify(userData));
-    logLoginSession(stored.email, serviceType);
+    if (stored.role !== role) {
+      return { ok: false, error: `This account is registered as ${stored.role}. Please use the ${stored.role} login.` };
+    }
+    const userData: User = { email: stored.email, name: stored.fullName, role: stored.role };
+    persist(userData);
+    logLoginSession(stored.email, stored.role, role === 'admin' ? 'Admin Access' : serviceType);
     return { ok: true };
   };
 
@@ -58,11 +72,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await new Promise((r) => setTimeout(r, 500));
     const existing = findUserByContact(input.email) || findUserByContact(input.phone);
     if (existing) return { ok: false, error: 'An account with this email or phone already exists' };
-    addUser(input);
-    const userData: User = { email: input.email, name: input.fullName };
-    setUser(userData);
-    localStorage.setItem('turbobook_user', JSON.stringify(userData));
-    logLoginSession(input.email, 'Account Created');
+    addUser({ ...input, role: 'customer' });
+    const userData: User = { email: input.email, name: input.fullName, role: 'customer' };
+    persist(userData);
+    logLoginSession(input.email, 'customer', input.purpose);
     return { ok: true };
   };
 
@@ -82,7 +95,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, resetPassword, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        isAuthenticated: !!user,
+        isAdmin: user?.role === 'admin',
+        isCustomer: user?.role === 'customer',
+        login,
+        signup,
+        resetPassword,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

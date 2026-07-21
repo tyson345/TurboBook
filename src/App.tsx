@@ -10,6 +10,7 @@ import AppointmentsPage from './pages/AppointmentsPage';
 import CustomersPage from './pages/CustomersPage';
 import ReportsPage from './pages/ReportsPage';
 import SettingsPage from './pages/SettingsPage';
+import CustomerPortalPage from './pages/CustomerPortalPage';
 
 export default function App() {
   return (
@@ -18,10 +19,11 @@ export default function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/portal" element={<ProtectedRoute role="customer"><CustomerPortalPage /></ProtectedRoute>} />
             <Route
               path="/"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute role="admin">
                   <DashboardLayout />
                 </ProtectedRoute>
               }

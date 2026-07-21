@@ -1,19 +1,35 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Zap, Mail, Lock, User as UserIcon, Phone, MapPin, ArrowLeft, ShieldCheck, Download } from 'lucide-react';
+import {
+  Eye,
+  EyeOff,
+  Zap,
+  Mail,
+  Lock,
+  User as UserIcon,
+  Phone,
+  MapPin,
+  ArrowLeft,
+  ShieldCheck,
+  Download,
+  Shield,
+  UserCircle,
+} from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { SERVICE_TYPES, SIGNUP_PURPOSES, downloadExcel } from '../lib/excelStore';
+import { SERVICE_TYPES, SIGNUP_PURPOSES, downloadExcel, getAdminCredentials } from '../lib/excelStore';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 type Mode = 'login' | 'signup' | 'forgot' | 'forgot-verify' | 'forgot-reset';
+type Role = 'admin' | 'customer';
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login, signup, resetPassword } = useAuth();
 
   const [mode, setMode] = useState<Mode>('login');
+  const [role, setRole] = useState<Role>('customer');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -38,13 +54,15 @@ export default function LoginPage() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const resetFields = () => {
+  const switchMode = (m: Mode) => {
+    setMode(m);
     setErrors({});
   };
 
-  const switchMode = (m: Mode) => {
-    setMode(m);
-    resetFields();
+  const switchRole = (r: Role) => {
+    setRole(r);
+    setErrors({});
+    setServiceType('');
   };
 
   /* ----------------------------- Sign In ----------------------------- */
@@ -54,7 +72,7 @@ export default function LoginPage() {
     if (!email.trim()) errs.email = 'Email is required';
     else if (!/\S+@\S+\.\S+/.test(email)) errs.email = 'Enter a valid email';
     if (!password.trim()) errs.password = 'Password is required';
-    if (!serviceType) errs.serviceType = 'Please select a service type';
+    if (role === 'customer' && !serviceType) errs.serviceType = 'Please select a service type';
     if (Object.keys(errs).length) {
       setErrors(errs);
       return;
@@ -62,10 +80,10 @@ export default function LoginPage() {
     setErrors({});
     setLoading(true);
     try {
-      const res = await login(email, password, serviceType);
+      const res = await login(email, password, serviceType, role);
       if (res.ok) {
-        toast.success('Welcome back!');
-        navigate('/dashboard');
+        toast.success(role === 'admin' ? 'Welcome back, Admin!' : 'Welcome back!');
+        navigate(role === 'admin' ? '/dashboard' : '/portal');
       } else {
         toast.error(res.error || 'Invalid email or password');
       }
@@ -103,7 +121,7 @@ export default function LoginPage() {
       });
       if (res.ok) {
         toast.success('Account created! Welcome to TurboBook');
-        navigate('/dashboard');
+        navigate('/portal');
       } else {
         toast.error(res.error || 'Could not create account');
       }
@@ -177,6 +195,12 @@ export default function LoginPage() {
     }
   };
 
+  const fillAdminCreds = () => {
+    const c = getAdminCredentials();
+    setEmail(c.email);
+    setPassword(c.password);
+  };
+
   /* ----------------------------- Render ----------------------------- */
   const inputClass = (err?: string) =>
     `w-full pl-10 pr-4 py-3 rounded-xl border text-sm transition-all focus:outline-none focus:ring-2 bg-gray-50 dark:bg-gray-800 dark:text-white ${
@@ -213,13 +237,39 @@ export default function LoginPage() {
               Turbo<span className="text-purple-700">Book</span>
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              {mode === 'login' && 'Sign in to your account'}
+              {mode === 'login' && (role === 'admin' ? 'Admin sign in' : 'Customer sign in')}
               {mode === 'signup' && 'Create a new account'}
               {mode === 'forgot' && 'Reset your password'}
               {mode === 'forgot-verify' && 'Verify the code'}
               {mode === 'forgot-reset' && 'Set a new password'}
             </p>
           </div>
+
+          {/* Role toggle (only on login & signup) */}
+          {(mode === 'login' || mode === 'signup') && (
+            <div className="flex gap-2 p-1 mb-6 bg-gray-100 dark:bg-gray-800 rounded-xl">
+              <button
+                onClick={() => switchRole('customer')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  role === 'customer'
+                    ? 'bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                <UserCircle className="h-4 w-4" /> Customer
+              </button>
+              <button
+                onClick={() => switchRole('admin')}
+                className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  role === 'admin'
+                    ? 'bg-white dark:bg-gray-900 text-purple-700 dark:text-purple-400 shadow-sm'
+                    : 'text-gray-500 dark:text-gray-400 hover:text-gray-700'
+                }`}
+              >
+                <Shield className="h-4 w-4" /> Admin
+              </button>
+            </div>
+          )}
 
           <AnimatePresence mode="wait">
             {/* ---------------- Sign In ---------------- */}
@@ -269,24 +319,37 @@ export default function LoginPage() {
                   {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password}</p>}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
-                    What service are you here for?
-                  </label>
-                  <select
-                    value={serviceType}
-                    onChange={(e) => setServiceType(e.target.value)}
-                    className={inputClass(errors.serviceType)}
+                {/* Service type — customers only */}
+                {role === 'customer' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      What service are you here for?
+                    </label>
+                    <select
+                      value={serviceType}
+                      onChange={(e) => setServiceType(e.target.value)}
+                      className={inputClass(errors.serviceType)}
+                    >
+                      <option value="">Select a service…</option>
+                      {SERVICE_TYPES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.serviceType && <p className="mt-1 text-xs text-red-500">{errors.serviceType}</p>}
+                  </div>
+                )}
+
+                {role === 'admin' && (
+                  <button
+                    type="button"
+                    onClick={fillAdminCreds}
+                    className="text-xs text-purple-700 dark:text-purple-400 hover:underline font-medium"
                   >
-                    <option value="">Select a service…</option>
-                    {SERVICE_TYPES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.serviceType && <p className="mt-1 text-xs text-red-500">{errors.serviceType}</p>}
-                </div>
+                    Use default admin credentials
+                  </button>
+                )}
 
                 <div className="flex items-center justify-end">
                   <button
@@ -324,7 +387,7 @@ export default function LoginPage() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 10 }}
                 onSubmit={handleSignup}
-                className="space-y-4 max-h-[60vh] overflow-y-auto pr-1"
+                className="space-y-4 max-h-[55vh] overflow-y-auto pr-1"
               >
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">Full Name</label>
@@ -582,7 +645,7 @@ export default function LoginPage() {
 
           {/* Footer links */}
           <div className="mt-6 space-y-2">
-            {mode === 'login' && (
+            {mode === 'login' && role === 'customer' && (
               <p className="text-center text-sm text-gray-500 dark:text-gray-400">
                 Don't have an account?{' '}
                 <button

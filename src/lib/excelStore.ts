@@ -41,6 +41,7 @@ export interface StoredUser {
   location: string;
   purpose: string;
   password: string;
+  role: 'admin' | 'customer';
   createdAt: string;
 }
 
@@ -50,10 +51,27 @@ interface SheetSpec {
 }
 
 const SHEETS: Record<string, SheetSpec> = {
-  users: { name: 'Users', headers: ['ID', 'Full Name', 'Phone', 'Email', 'Location', 'Purpose', 'Password', 'Created At'] },
-  loginLogs: { name: 'Login Logs', headers: ['Email', 'Service Type', 'Login At'] },
+  users: { name: 'Users', headers: ['ID', 'Full Name', 'Phone', 'Email', 'Location', 'Purpose', 'Password', 'Role', 'Created At'] },
+  loginLogs: { name: 'Login Logs', headers: ['Email', 'Role', 'Service Type', 'Login At'] },
   passwordResets: { name: 'Password Resets', headers: ['Contact', 'Contact Type', 'Verified At', 'Reset At'] },
 };
+
+const ADMIN_EMAIL = 'admin@turbobook.com';
+const ADMIN_PASSWORD = 'Admin@123';
+const ADMIN_SEED_KEY = 'turbobook_admin_seeded';
+
+function seedAdminIfNeeded(wb: XLSX.WorkBook) {
+  if (localStorage.getItem(ADMIN_SEED_KEY)) return;
+  const ws = ensureSheet(wb, 'users');
+  const aoa = XLSX.utils.sheet_to_json<any[]>(ws, { header: 1, blankrows: false });
+  const exists = aoa.slice(1).some((r) => String(r[3] ?? '').toLowerCase() === ADMIN_EMAIL);
+  if (!exists) {
+    appendRow(wb, 'users', [
+      'ADMIN-001', 'TurboBook Admin', '+1 000 000 0000', ADMIN_EMAIL, 'HQ', 'Administration', ADMIN_PASSWORD, 'admin', new Date().toISOString(),
+    ]);
+  }
+  localStorage.setItem(ADMIN_SEED_KEY, '1');
+}
 
 function emptyWorkbook(): XLSX.WorkBook {
   const wb = XLSX.utils.book_new();
@@ -71,12 +89,16 @@ function loadWorkbook(): XLSX.WorkBook {
       const binary = atob(stored);
       const bytes = new Uint8Array(binary.length);
       for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return XLSX.read(bytes, { type: 'array' });
+      const wb = XLSX.read(bytes, { type: 'array' });
+      seedAdminIfNeeded(wb);
+      persistWorkbook(wb);
+      return wb;
     } catch {
       // fall through to a fresh workbook
     }
   }
   const wb = emptyWorkbook();
+  seedAdminIfNeeded(wb);
   persistWorkbook(wb);
   return wb;
 }
@@ -126,7 +148,7 @@ export function addUser(input: Omit<StoredUser, 'id' | 'createdAt'>): StoredUser
   const wb = loadWorkbook();
   const user: StoredUser = { ...input, id: uid(), createdAt: new Date().toISOString() };
   appendRow(wb, 'users', [
-    user.id, user.fullName, user.phone, user.email, user.location, user.purpose, user.password, user.createdAt,
+    user.id, user.fullName, user.phone, user.email, user.location, user.purpose, user.password, user.role, user.createdAt,
   ]);
   persistWorkbook(wb);
   return user;
@@ -144,7 +166,8 @@ export function findUserByContact(contact: string): StoredUser | null {
     location: String(r[4] ?? ''),
     purpose: String(r[5] ?? ''),
     password: String(r[6] ?? ''),
-    createdAt: String(r[7] ?? ''),
+    role: (String(r[7] ?? 'customer') === 'admin' ? 'admin' : 'customer') as 'admin' | 'customer',
+    createdAt: String(r[8] ?? ''),
   }));
   return (
     rows.find((u) => u.email === normalized || (digits && u.phone.replace(/\D/g, '') === digits)) ?? null
@@ -180,9 +203,9 @@ export function updateUserPassword(contact: string, newPassword: string): boolea
   return true;
 }
 
-export function logLoginSession(email: string, serviceType: string) {
+export function logLoginSession(email: string, role: string, serviceType: string) {
   const wb = loadWorkbook();
-  appendRow(wb, 'loginLogs', [email, serviceType, new Date().toISOString()]);
+  appendRow(wb, 'loginLogs', [email, role, serviceType, new Date().toISOString()]);
   persistWorkbook(wb);
 }
 
@@ -191,6 +214,10 @@ export function logPasswordReset(contact: string, contactType: 'email' | 'phone'
   const now = new Date().toISOString();
   appendRow(wb, 'passwordResets', [contact, contactType, now, now]);
   persistWorkbook(wb);
+}
+
+export function getAdminCredentials() {
+  return { email: ADMIN_EMAIL, password: ADMIN_PASSWORD };
 }
 
 export function downloadExcel() {
@@ -217,6 +244,7 @@ export function getAllUsers(): StoredUser[] {
     location: String(r[4] ?? ''),
     purpose: String(r[5] ?? ''),
     password: String(r[6] ?? ''),
-    createdAt: String(r[7] ?? ''),
+    role: (String(r[7] ?? 'customer') === 'admin' ? 'admin' : 'customer') as 'admin' | 'customer',
+    createdAt: String(r[8] ?? ''),
   }));
 }

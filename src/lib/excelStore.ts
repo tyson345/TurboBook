@@ -248,3 +248,45 @@ export function getAllUsers(): StoredUser[] {
     createdAt: String(r[8] ?? ''),
   }));
 }
+
+export interface LoginLog {
+  email: string;
+  role: string;
+  serviceType: string;
+  loginAt: string;
+}
+
+export function getAllLoginLogs(): LoginLog[] {
+  const wb = loadWorkbook();
+  return sheetToRows<LoginLog>(wb, 'loginLogs', (r) => ({
+    email: String(r[0] ?? ''),
+    role: String(r[1] ?? ''),
+    serviceType: String(r[2] ?? ''),
+    loginAt: String(r[3] ?? ''),
+  }));
+}
+
+export interface PasswordResetRecord {
+  contact: string;
+  contactType: string;
+  verifiedAt: string;
+  resetAt: string;
+}
+
+export function getAllPasswordResets(): PasswordResetRecord[] {
+  const wb = loadWorkbook();
+  return sheetToRows<PasswordResetRecord>(wb, 'passwordResets', (r) => ({
+    contact: String(r[0] ?? ''),
+    contactType: String(r[1] ?? ''),
+    verifiedAt: String(r[2] ?? ''),
+    resetAt: String(r[3] ?? ''),
+  }));
+}
+
+export function getCustomerCount(): number {
+  return getAllUsers().filter((u) => u.role === 'customer').length;
+}
+
+export function getLoginCount(): number {
+  return getAllLoginLogs().length;
+}

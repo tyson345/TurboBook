@@ -1,8 +1,11 @@
 import { useState } from 'react';
-import { Menu, Search, Bell, Sun, Moon, ChevronDown } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Menu, Search, Bell, Sun, Moon, ChevronDown, FileSpreadsheet, LogOut } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { downloadExcel } from '../lib/excelStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 
 interface NavbarProps {
   onMenuClick: () => void;
@@ -13,8 +16,20 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
   const { isDark, toggleTheme } = useTheme();
   const [showProfile, setShowProfile] = useState(false);
   const [notifications] = useState(3);
+  const navigate = useNavigate();
 
   const initials = user?.name?.split(' ').map((n) => n[0]).join('').toUpperCase() ?? 'A';
+
+  const handleExport = () => {
+    downloadExcel();
+    toast.success('Excel file downloaded');
+  };
+
+  const handleLogout = () => {
+    logout();
+    toast.success('Logged out successfully');
+    navigate('/login');
+  };
 
   return (
     <header className="sticky top-0 z-30 flex items-center gap-4 px-4 md:px-6 py-4 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md border-b border-gray-100 dark:border-gray-800">
@@ -38,6 +53,17 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
       </div>
 
       <div className="flex items-center gap-2 ml-auto">
+        {/* Export Excel */}
+        <motion.button
+          onClick={handleExport}
+          whileTap={{ scale: 0.95 }}
+          whileHover={{ scale: 1.03 }}
+          className="flex items-center gap-2 px-3 py-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors text-sm font-semibold"
+          title="Export all data to Excel"
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          <span className="hidden sm:inline">Export Excel</span>
+        </motion.button>
         {/* Dark mode toggle */}
         <motion.button
           onClick={toggleTheme}
@@ -87,9 +113,10 @@ export default function Navbar({ onMenuClick }: NavbarProps) {
                   <p className="text-xs text-gray-500">{user?.email}</p>
                 </div>
                 <button
-                  onClick={() => { logout(); }}
-                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                  onClick={handleLogout}
+                  className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors flex items-center gap-2"
                 >
+                  <LogOut className="h-3.5 w-3.5" />
                   Sign out
                 </button>
               </motion.div>

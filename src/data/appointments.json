@@ -1,0 +1,122 @@
+[
+  {
+    "id": "apt-001",
+    "customerName": "Sophia Williams",
+    "service": "Hair Cut & Style",
+    "date": "2026-07-21",
+    "time": "09:00 AM",
+    "status": "confirmed",
+    "phone": "+1 (555) 234-5678",
+    "email": "sophia.w@example.com"
+  },
+  {
+    "id": "apt-002",
+    "customerName": "James Carter",
+    "service": "Beard Trim",
+    "date": "2026-07-21",
+    "time": "10:30 AM",
+    "status": "pending",
+    "phone": "+1 (555) 345-6789",
+    "email": "james.c@example.com"
+  },
+  {
+    "id": "apt-003",
+    "customerName": "Emma Johnson",
+    "service": "Color Treatment",
+    "date": "2026-07-21",
+    "time": "11:00 AM",
+    "status": "confirmed",
+    "phone": "+1 (555) 456-7890",
+    "email": "emma.j@example.com"
+  },
+  {
+    "id": "apt-004",
+    "customerName": "Oliver Brown",
+    "service": "Massage Therapy",
+    "date": "2026-07-22",
+    "time": "02:00 PM",
+    "status": "cancelled",
+    "phone": "+1 (555) 567-8901",
+    "email": "oliver.b@example.com"
+  },
+  {
+    "id": "apt-005",
+    "customerName": "Ava Davis",
+    "service": "Manicure & Pedicure",
+    "date": "2026-07-22",
+    "time": "03:30 PM",
+    "status": "confirmed",
+    "phone": "+1 (555) 678-9012",
+    "email": "ava.d@example.com"
+  },
+  {
+    "id": "apt-006",
+    "customerName": "Noah Wilson",
+    "service": "Facial Treatment",
+    "date": "2026-07-23",
+    "time": "09:30 AM",
+    "status": "pending",
+    "phone": "+1 (555) 789-0123",
+    "email": "noah.w@example.com"
+  },
+  {
+    "id": "apt-007",
+    "customerName": "Isabella Martinez",
+    "service": "Hair Cut & Style",
+    "date": "2026-07-23",
+    "time": "11:00 AM",
+    "status": "confirmed",
+    "phone": "+1 (555) 890-1234",
+    "email": "isabella.m@example.com"
+  },
+  {
+    "id": "apt-008",
+    "customerName": "Liam Anderson",
+    "service": "Waxing",
+    "date": "2026-07-24",
+    "time": "01:00 PM",
+    "status": "pending",
+    "phone": "+1 (555) 901-2345",
+    "email": "liam.a@example.com"
+  },
+  {
+    "id": "apt-009",
+    "customerName": "Mia Thompson",
+    "service": "Color Treatment",
+    "date": "2026-07-24",
+    "time": "02:30 PM",
+    "status": "confirmed",
+    "phone": "+1 (555) 012-3456",
+    "email": "mia.t@example.com"
+  },
+  {
+    "id": "apt-010",
+    "customerName": "Ethan White",
+    "service": "Beard Trim",
+    "date": "2026-07-25",
+    "time": "10:00 AM",
+    "status": "cancelled",
+    "phone": "+1 (555) 123-4567",
+    "email": "ethan.w@example.com"
+  },
+  {
+    "id": "apt-011",
+    "customerName": "Charlotte Harris",
+    "service": "Massage Therapy",
+    "date": "2026-07-25",
+    "time": "11:30 AM",
+    "status": "confirmed",
+    "phone": "+1 (555) 234-5679",
+    "email": "charlotte.h@example.com"
+  },
+  {
+    "id": "apt-012",
+    "customerName": "Benjamin Clark",
+    "service": "Hair Cut & Style",
+    "date": "2026-07-26",
+    "time": "09:00 AM",
+    "status": "pending",
+    "phone": "+1 (555) 345-6780",
+    "email": "benjamin.c@example.com"
+  }
+]

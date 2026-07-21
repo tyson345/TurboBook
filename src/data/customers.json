@@ -1,0 +1,98 @@
+[
+  {
+    "id": "cust-001",
+    "name": "Sophia Williams",
+    "phone": "+1 (555) 234-5678",
+    "email": "sophia.w@example.com",
+    "lastVisit": "2026-07-21",
+    "totalAppointments": 8
+  },
+  {
+    "id": "cust-002",
+    "name": "James Carter",
+    "phone": "+1 (555) 345-6789",
+    "email": "james.c@example.com",
+    "lastVisit": "2026-07-21",
+    "totalAppointments": 3
+  },
+  {
+    "id": "cust-003",
+    "name": "Emma Johnson",
+    "phone": "+1 (555) 456-7890",
+    "email": "emma.j@example.com",
+    "lastVisit": "2026-07-21",
+    "totalAppointments": 12
+  },
+  {
+    "id": "cust-004",
+    "name": "Oliver Brown",
+    "phone": "+1 (555) 567-8901",
+    "email": "oliver.b@example.com",
+    "lastVisit": "2026-07-15",
+    "totalAppointments": 5
+  },
+  {
+    "id": "cust-005",
+    "name": "Ava Davis",
+    "phone": "+1 (555) 678-9012",
+    "email": "ava.d@example.com",
+    "lastVisit": "2026-07-22",
+    "totalAppointments": 7
+  },
+  {
+    "id": "cust-006",
+    "name": "Noah Wilson",
+    "phone": "+1 (555) 789-0123",
+    "email": "noah.w@example.com",
+    "lastVisit": "2026-07-10",
+    "totalAppointments": 2
+  },
+  {
+    "id": "cust-007",
+    "name": "Isabella Martinez",
+    "phone": "+1 (555) 890-1234",
+    "email": "isabella.m@example.com",
+    "lastVisit": "2026-07-23",
+    "totalAppointments": 15
+  },
+  {
+    "id": "cust-008",
+    "name": "Liam Anderson",
+    "phone": "+1 (555) 901-2345",
+    "email": "liam.a@example.com",
+    "lastVisit": "2026-07-18",
+    "totalAppointments": 4
+  },
+  {
+    "id": "cust-009",
+    "name": "Mia Thompson",
+    "phone": "+1 (555) 012-3456",
+    "email": "mia.t@example.com",
+    "lastVisit": "2026-07-24",
+    "totalAppointments": 9
+  },
+  {
+    "id": "cust-010",
+    "name": "Ethan White",
+    "phone": "+1 (555) 123-4567",
+    "email": "ethan.w@example.com",
+    "lastVisit": "2026-07-12",
+    "totalAppointments": 6
+  },
+  {
+    "id": "cust-011",
+    "name": "Charlotte Harris",
+    "phone": "+1 (555) 234-5679",
+    "email": "charlotte.h@example.com",
+    "lastVisit": "2026-07-25",
+    "totalAppointments": 11
+  },
+  {
+    "id": "cust-012",
+    "name": "Benjamin Clark",
+    "phone": "+1 (555) 345-6780",
+    "email": "benjamin.c@example.com",
+    "lastVisit": "2026-07-08",
+    "totalAppointments": 1
+  }
+]
